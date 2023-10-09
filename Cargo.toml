@@ -7,7 +7,7 @@ authors = ["Mohamad Alzohbie <alzoubi528@gmail.com>"]
 description= "package for handling time in rust more easily"
 repository = "https://gitlab.com/mohamadzoh/easy_time"
 readme = "README.md"
-keywords = ["time", "date", "datetime", "easy", "rust","chrono","fast","simple"]
+keywords = ["time", "date", "datetime", "easy","chrono"]
 license = "MIT/Apache-2.0"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
