@@ -7,7 +7,7 @@ The EasyTime library is a Rust crate that provides a simple and flexible way to 
 - Easy-to-use API for date and time calculations.
 - Support for working with local time and UTC time.
 - Precise handling of leap years in month and year calculations.
-- Calculation methods for adding or subtracting seconds, minutes, hours, days, months, and years.
+- Calculation methods for adding or subtracting seconds, minutes, hours, days, months, years, decades, centuries and milleniums.
 
 ## Installation
 
