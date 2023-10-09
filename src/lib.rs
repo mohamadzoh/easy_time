@@ -168,14 +168,12 @@ impl<F: TimeZone> EasyTime<F> {
         self.time_now.clone() - Duration::days(day_count)
     }
 
-
     pub fn milleniums_from_now(&self) -> DateTime<F> {
         let current_year: i64 = self.time_now.clone().year().into();
         let target_year: i64 = current_year + (self.value * 1000);
         let day_count: i64 = Self::days_between_years(current_year, target_year);
         self.time_now.clone() + Duration::days(day_count)
     }
-
 
     pub fn milleniums_ago(&self) -> DateTime<F> {
         let current_year: i64 = self.time_now.clone().year().into();
