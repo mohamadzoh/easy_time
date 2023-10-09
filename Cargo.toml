@@ -5,7 +5,7 @@ edition = "2021"
 authors = ["Mohamad Alzohbie <alzoubi528@gmail.com>"]
 
 description= "package for handling time in rust more easily"
-repository = "https://gitlab.com/mohamadzoh/easy_time"
+repository = "https://github.com/mohamadzoh/easy_time"
 readme = "README.md"
 keywords = ["time", "date", "datetime", "easy","chrono"]
 license = "MIT/Apache-2.0"
