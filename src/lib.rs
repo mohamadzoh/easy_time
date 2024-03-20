@@ -86,99 +86,99 @@ impl<F: TimeZone> EasyTime<F> {
     }
 
     pub fn seconds_from_now(&self) -> DateTime<F> {
-        self.time_now.clone() + Duration::seconds(self.value)
+        self.time_now.clone() + Duration::try_seconds(self.value).unwrap()
     }
 
     pub fn seconds_ago(&self) -> DateTime<F> {
-        self.time_now.clone() - Duration::seconds(self.value)
+        self.time_now.clone() - Duration::try_seconds(self.value).unwrap()
     }
 
     pub fn minutes_from_now(&self) -> DateTime<F> {
-        self.time_now.clone() + Duration::minutes(self.value)
+        self.time_now.clone() + Duration::try_minutes(self.value).unwrap()
     }
 
     pub fn minutes_ago(&self) -> DateTime<F> {
-        self.time_now.clone() - Duration::minutes(self.value)
+        self.time_now.clone() - Duration::try_minutes(self.value).unwrap()
     }
 
     pub fn hours_from_now(&self) -> DateTime<F> {
-        self.time_now.clone() + Duration::hours(self.value)
+        self.time_now.clone() + Duration::try_hours(self.value).unwrap()
     }
 
     pub fn hours_ago(&self) -> DateTime<F> {
-        self.time_now.clone() - Duration::hours(self.value)
+        self.time_now.clone() - Duration::try_hours(self.value).unwrap()
     }
 
     pub fn days_from_now(&self) -> DateTime<F> {
-        self.time_now.clone() + Duration::days(self.value)
+        self.time_now.clone() + Duration::try_days(self.value).unwrap()
     }
 
     pub fn days_ago(&self) -> DateTime<F> {
-        self.time_now.clone() - Duration::days(self.value)
+        self.time_now.clone() - Duration::try_days(self.value).unwrap()
     }
     pub fn months_from_now(&self) -> DateTime<F> {
         let days_count: i64 = Self::months_handler(self.time_now.clone(), self.value);
-        self.time_now.clone() + Duration::days(days_count)
+        self.time_now.clone() + Duration::try_days(days_count).unwrap()
     }
 
     pub fn months_ago(&self) -> DateTime<F> {
         let days_count: i64 = Self::months_handler(self.time_now.clone(), self.value);
-        self.time_now.clone() - Duration::days(days_count)
+        self.time_now.clone() - Duration::try_days(days_count).unwrap()
     }
 
     pub fn years_from_now(&self) -> DateTime<F> {
         let current_year: i64 = self.time_now.clone().year().into();
         let target_year: i64 = current_year + self.value;
         let day_count: i64 = Self::days_between_years(current_year, target_year);
-        self.time_now.clone() + Duration::days(day_count)
-    }
+        self.time_now.clone() + Duration::try_days(day_count)
+.unwrap()    }
 
     pub fn years_ago(&self) -> DateTime<F> {
         let current_year: i64 = self.time_now.clone().year().into();
         let target_year: i64 = current_year - self.value;
         let day_count: i64 = Self::days_between_years(target_year, current_year);
-        self.time_now.clone() - Duration::days(day_count)
-    }
+        self.time_now.clone() - Duration::try_days(day_count)
+.unwrap()    }
 
     pub fn decades_from_now(&self) -> DateTime<F> {
         let current_year: i64 = self.time_now.clone().year().into();
         let target_year: i64 = current_year + (self.value * 10);
         let day_count: i64 = Self::days_between_years(current_year, target_year);
-        self.time_now.clone() + Duration::days(day_count)
-    }
+        self.time_now.clone() + Duration::try_days(day_count)
+.unwrap()    }
 
     pub fn decades_ago(&self) -> DateTime<F> {
         let current_year: i64 = self.time_now.clone().year().into();
         let target_year: i64 = current_year - (self.value * 10);
         let day_count: i64 = Self::days_between_years(target_year, current_year);
-        self.time_now.clone() - Duration::days(day_count)
+        self.time_now.clone() - Duration::try_days(day_count).unwrap()
     }
 
     pub fn centuries_from_now(&self) -> DateTime<F> {
         let current_year: i64 = self.time_now.clone().year().into();
         let target_year: i64 = current_year + (self.value * 100);
         let day_count: i64 = Self::days_between_years(current_year, target_year);
-        self.time_now.clone() + Duration::days(day_count)
+        self.time_now.clone() + Duration::try_days(day_count).unwrap()
     }
 
     pub fn centuries_ago(&self) -> DateTime<F> {
         let current_year: i64 = self.time_now.clone().year().into();
         let target_year: i64 = current_year - (self.value * 100);
         let day_count: i64 = Self::days_between_years(target_year, current_year);
-        self.time_now.clone() - Duration::days(day_count)
+        self.time_now.clone() - Duration::try_days(day_count).unwrap()
     }
 
-    pub fn milleniums_from_now(&self) -> DateTime<F> {
+    pub fn millenniums_from_now(&self) -> DateTime<F> {
         let current_year: i64 = self.time_now.clone().year().into();
         let target_year: i64 = current_year + (self.value * 1000);
         let day_count: i64 = Self::days_between_years(current_year, target_year);
-        self.time_now.clone() + Duration::days(day_count)
+        self.time_now.clone() + Duration::try_days(day_count).unwrap()
     }
 
-    pub fn milleniums_ago(&self) -> DateTime<F> {
+    pub fn millenniums_ago(&self) -> DateTime<F> {
         let current_year: i64 = self.time_now.clone().year().into();
         let target_year: i64 = current_year - (self.value * 1000);
         let day_count: i64 = Self::days_between_years(target_year, current_year);
-        self.time_now.clone() - Duration::days(day_count)
+        self.time_now.clone() - Duration::try_days(day_count).unwrap()
     }
 }
