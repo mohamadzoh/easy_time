@@ -22,7 +22,6 @@ mod tests {
         let date_time: chrono::DateTime<Local> = Local::now();
         let easy_time: EasyTime<Local> = EasyTime::new_with_time(10, date_time);
         let expected: chrono::DateTime<Local> = date_time + Duration::seconds(10);
-        // assert_eq!(easy_time.seconds_from_now(), expected);
         assert_eq!(easy_time.seconds_from_now(),expected);
     }
 
@@ -212,6 +211,165 @@ mod tests {
         // Going 100 years ago from 2023-03-01 => 1923-03-01
         let expected = Local.with_ymd_and_hms(1923, 3, 1, 0, 0, 0).unwrap();
         assert_eq!(easy_time.years_ago(), expected);
+    }
+
+
+    #[test]
+    fn test_decades_ago() {
+        let date_time = Local.with_ymd_and_hms(2023, 7, 15, 8, 30, 0).unwrap();
+        let easy_time = EasyTime::new_with_time(2, date_time);
+        // Subtracting 2 decades => 20 years
+        let expected_year = 2023 - 20; // 2003
+        let expected = Local.with_ymd_and_hms(expected_year, 7, 15, 8, 30, 0).unwrap();
+        assert_eq!(easy_time.decades_ago(), expected);
+    }
+
+    // Test centuries_ago
+    #[test]
+    fn test_centuries_ago() {
+        let date_time = Local.with_ymd_and_hms(2000, 1, 1, 0, 0, 0).unwrap();
+        let easy_time = EasyTime::new_with_time(1, date_time);
+        // Subtracting 1 century => -100 years = 1900
+        let expected = Local.with_ymd_and_hms(1900, 1, 1, 0, 0, 0).unwrap();
+        assert_eq!(easy_time.centuries_ago(), expected);
+    }
+
+    // Test millenniums_ago
+    #[test]
+    fn test_millenniums_ago() {
+        let date_time = Local.with_ymd_and_hms(2000, 6, 1, 12, 0, 0).unwrap();
+        let easy_time = EasyTime::new_with_time(1, date_time);
+        // Subtracting 1 millennium => -1000 years = year 1000
+        let expected = Local.with_ymd_and_hms(1000, 6, 1, 12, 0, 0).unwrap();
+        assert_eq!(easy_time.millenniums_ago(), expected);
+    }
+
+    // Test to_string
+    #[test]
+    fn test_to_string() {
+        let date_time = Local.with_ymd_and_hms(2023, 10, 1, 12, 34, 56).unwrap();
+        let easy_time = EasyTime::new_with_time(0, date_time);
+        // Default format is "%Y-%m-%d %H:%M:%S"
+        let formatted = easy_time.to_string();
+        // We expect something like "2023-10-01 12:34:56"
+        assert_eq!(formatted, "2023-10-01 12:34:56");
+    }
+
+    // Test to_string_with_format
+    #[test]
+    fn test_to_string_with_format() {
+        let date_time = Local.with_ymd_and_hms(2023, 10, 1, 12, 34, 56).unwrap();
+        let easy_time = EasyTime::new_with_time(0, date_time);
+        let formatted = easy_time.to_string_with_format("%Y/%m/%d-%H:%M");
+        // We expect "2023/10/01-12:34"
+        assert_eq!(formatted, "2023/10/01-12:34");
+    }
+
+    // Test to_string_with_timezone
+    #[test]
+    fn test_to_string_with_timezone() {
+        let date_time = Local.with_ymd_and_hms(2024, 3, 5, 8, 9, 7).unwrap();
+        let easy_time = EasyTime::new_with_time(0, date_time);
+
+        let result = easy_time.to_string_with_timezone();
+        // Something like "2024-03-05 08:09:07 +0100" (offset may vary depending on local TZ)
+        // We'll just check if it starts with the datetime part and ends with offset
+        assert!(
+            result.starts_with("2024-03-05 08:09:07 "),
+            "Result was: {}",
+            result
+        );
+        // Optionally, we can check for a plus or minus sign in the offset
+        assert!(
+            result.contains(" +") || result.contains(" -"),
+            "Timezone offset not found in string: {}",
+            result
+        );
+    }
+
+    // Test to_string_with_timezone_format
+    #[test]
+    fn test_to_string_with_timezone_format() {
+        let date_time = Local.with_ymd_and_hms(2024, 1, 1, 0, 0, 0).unwrap();
+        let easy_time = EasyTime::new_with_time(0, date_time);
+
+        let custom_format = "%m-%d-%Y %H:%M:%S";
+        let result = easy_time.to_string_with_timezone_format(custom_format);
+        // Example: "01-01-2024 00:00:00 +0100"
+        assert!(result.contains("01-01-2024 00:00:00"), "Got: {}", result);
+        assert!(
+            result.contains(" +") || result.contains(" -"),
+            "Timezone offset not found in string: {}",
+            result
+        );
+    }
+
+    // Test to_string_with_timezone_format_with_timezone
+    #[test]
+    fn test_to_string_with_timezone_format_with_timezone() {
+        let date_time = Local.with_ymd_and_hms(2022, 12, 31, 23, 59, 59).unwrap();
+        let easy_time = EasyTime::new_with_time(0, date_time);
+
+        let custom_format = "%Y/%m/%d %H:%M:%S";
+        let result = easy_time.to_string_with_timezone_format_with_timezone(custom_format);
+        // Example: "2022/12/31 23:59:59 +0100"
+        assert!(result.starts_with("2022/12/31 23:59:59"), "Got: {}", result);
+        assert!(
+            result.contains(" +") || result.contains(" -"),
+            "Timezone offset not found in string: {}",
+            result
+        );
+    }
+
+    // Test to_timestamp
+    #[test]
+    fn test_to_timestamp() {
+        let date_time = Local.with_ymd_and_hms(2023, 5, 1, 12, 34, 56).unwrap();
+        let easy_time = EasyTime::new_with_time(0, date_time);
+        // The timestamp is seconds from the Unix epoch
+        let expected = date_time.timestamp();
+        assert_eq!(easy_time.to_timestamp(), expected);
+    }
+
+    // Test to_date
+    #[test]
+    fn test_to_date() {
+        let date_time = Local.with_ymd_and_hms(2023, 11, 15, 10, 11, 12).unwrap();
+        let easy_time = EasyTime::new_with_time(0, date_time);
+        assert_eq!(easy_time.to_date(), "2023-11-15");
+    }
+
+    // Test to_time
+    #[test]
+    fn test_to_time() {
+        let date_time = Local.with_ymd_and_hms(2023, 11, 15, 10, 11, 12).unwrap();
+        let easy_time = EasyTime::new_with_time(0, date_time);
+        assert_eq!(easy_time.to_time(), "10:11:12");
+    }
+
+    // Test to_date_time
+    #[test]
+    fn test_to_date_time() {
+        let date_time = Local.with_ymd_and_hms(2023, 4, 10, 14, 22, 33).unwrap();
+        let easy_time = EasyTime::new_with_time(0, date_time);
+        // Format is "%Y-%m-%d %H:%M:%S"
+        assert_eq!(easy_time.to_date_time(), "2023-04-10 14:22:33");
+    }
+
+    // Test to_date_time_with_timezone_format
+    #[test]
+    fn test_to_date_time_with_timezone_format() {
+        let date_time = Local.with_ymd_and_hms(2023, 12, 25, 17, 45, 59).unwrap();
+        let easy_time = EasyTime::new_with_time(0, date_time);
+        let format_str = "%m/%d/%Y %H:%M:%S";
+        let result = easy_time.to_date_time_with_timezone_format(format_str);
+        // e.g. "12/25/2023 17:45:59 +0100"
+        assert!(result.starts_with("12/25/2023 17:45:59"), "Got: {}", result);
+        assert!(
+            result.contains(" +") || result.contains(" -"),
+            "Expected timezone offset, got: {}",
+            result
+        );
     }
 
 }

@@ -1,33 +1,87 @@
 use chrono::prelude::*;
-use chrono::{Datelike, Duration, Local, TimeZone, Utc};
+use chrono::{Datelike, Duration, Local, LocalResult, TimeZone, Utc};
 
+#[derive(Clone, PartialEq, Debug, Eq)]
 pub struct EasyTime<F: TimeZone> {
     pub value: i64,
     pub time_now: DateTime<F>,
 }
 
-impl<F: TimeZone> EasyTime<F> {
-    pub fn new(value: i64) -> EasyTime<Local> {
-        EasyTime {
+// ----------------------------------------------------------
+//           EasyTime<Local>: Constructors
+// ----------------------------------------------------------
+impl EasyTime<Local> {
+    pub fn new(value: i64) -> Self {
+        Self {
             value,
             time_now: Local::now(),
         }
     }
 
-    pub fn new_with_utc(value: i64) -> EasyTime<Utc> {
-        EasyTime {
+    pub fn new_with_local(time: DateTime<Local>, value: i64) -> Self {
+        Self {
+            value,
+            time_now: time,
+        }
+    }
+}
+
+// ----------------------------------------------------------
+//           EasyTime<Utc>: Constructors
+// ----------------------------------------------------------
+impl EasyTime<Utc> {
+    pub fn new_with_utc(value: i64) -> Self {
+        Self {
             value,
             time_now: Utc::now(),
         }
     }
+}
 
-    pub fn new_with_time(value: i64, time: DateTime<F>) -> EasyTime<F> {
-        EasyTime {
+// ----------------------------------------------------------
+//   EasyTime<F> for Any TimeZone: Generic Implementation
+// ----------------------------------------------------------
+impl<F: TimeZone> EasyTime<F>
+where
+    F::Offset: std::fmt::Display,
+{
+    pub fn from_time(time: DateTime<F>) -> Self {
+        Self {
+            value: 0,
+            time_now: time,
+        }
+    }
+
+    /// Creates an `EasyTime` with a specific `time_now` in any timezone `F`.
+    pub fn new_with_time(value: i64, time: DateTime<F>) -> Self {
+        Self {
             value,
             time_now: time,
         }
     }
 
+    // ------------------------------------------------------------------
+    //                    Getters / Setters
+    // ------------------------------------------------------------------
+    pub fn set_value(&mut self, value: i64) {
+        self.value = value;
+    }
+
+    pub fn set_time(&mut self, time: DateTime<F>) {
+        self.time_now = time;
+    }
+
+    pub fn get_value(&self) -> i64 {
+        self.value
+    }
+
+    pub fn get_time(&self) -> DateTime<F> {
+        self.time_now.clone()
+    }
+
+    // ------------------------------------------------------------------
+    //                      Internal Helpers
+    // ------------------------------------------------------------------
     fn is_leap_year(year: i32) -> bool {
         (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
     }
@@ -56,50 +110,72 @@ impl<F: TimeZone> EasyTime<F> {
         }
     }
 
+    /// Add `duration` to `time_now`.
+    fn offset(&self, duration: Duration) -> DateTime<F> {
+        self.time_now.clone() + duration
+    }
+
+    /// Subtract `duration` from `time_now`.
+    fn offset_neg(&self, duration: Duration) -> DateTime<F> {
+        self.time_now.clone() - duration
+    }
+
+    /// Tries to build a `DateTime<F>` from a naive date-time.
+    /// Uses `.unwrap()` in ambiguous cases by picking the first match, and panics on invalid.
+    fn from_naive_local(&self, naive: chrono::NaiveDateTime) -> DateTime<F> {
+        match self.time_now.timezone().from_local_datetime(&naive) {
+            LocalResult::Single(dt) => dt,
+            LocalResult::Ambiguous(a, _b) => a,
+            LocalResult::None => panic!("Invalid or non-existent local time."),
+        }
+    }
+
+    // ------------------------------------------------------------------
+    //           Simple Offsets: seconds, minutes, hours, days
+    // ------------------------------------------------------------------
     pub fn seconds_from_now(&self) -> DateTime<F> {
-        self.time_now.clone() + Duration::seconds(self.value)
+        self.offset(Duration::seconds(self.value))
     }
 
     pub fn seconds_ago(&self) -> DateTime<F> {
-        self.time_now.clone() - Duration::seconds(self.value)
+        self.offset_neg(Duration::seconds(self.value))
     }
 
     pub fn minutes_from_now(&self) -> DateTime<F> {
-        self.time_now.clone() + Duration::minutes(self.value)
+        self.offset(Duration::minutes(self.value))
     }
 
     pub fn minutes_ago(&self) -> DateTime<F> {
-        self.time_now.clone() - Duration::minutes(self.value)
+        self.offset_neg(Duration::minutes(self.value))
     }
 
     pub fn hours_from_now(&self) -> DateTime<F> {
-        self.time_now.clone() + Duration::hours(self.value)
+        self.offset(Duration::hours(self.value))
     }
 
     pub fn hours_ago(&self) -> DateTime<F> {
-        self.time_now.clone() - Duration::hours(self.value)
+        self.offset_neg(Duration::hours(self.value))
     }
 
     pub fn days_from_now(&self) -> DateTime<F> {
-        self.time_now.clone() + Duration::days(self.value)
+        self.offset(Duration::days(self.value))
     }
 
     pub fn days_ago(&self) -> DateTime<F> {
-        self.time_now.clone() - Duration::days(self.value)
+        self.offset_neg(Duration::days(self.value))
     }
 
-    /// Adjusts the date by a certain number of months.
-    /// This method tries to keep the day of the month stable. If the target month doesn't have the current day,
-    /// it uses the last valid day of the target month.
+    // ------------------------------------------------------------------
+    //               Month-Based Offset (custom logic)
+    // ------------------------------------------------------------------
     fn add_months(&self, months: i32) -> DateTime<F> {
         let naive = self.time_now.naive_local();
-        let year = naive.year();
-        let month = naive.month() as i32;
-        let day = naive.day();
+        let (year, month, day) = (naive.year(), naive.month() as i32, naive.day());
 
         // Calculate target year and month
         let mut target_year = year + (months / 12);
         let mut target_month = month + (months % 12);
+
         while target_month > 12 {
             target_month -= 12;
             target_year += 1;
@@ -109,15 +185,15 @@ impl<F: TimeZone> EasyTime<F> {
             target_year -= 1;
         }
 
-        let days_in_target_month = Self::days_in_month(target_year, target_month as u32);
-        let target_day = std::cmp::min(day, days_in_target_month);
+        let days_in_target = Self::days_in_month(target_year, target_month as u32);
+        let target_day = std::cmp::min(day, days_in_target);
 
-        let target_date = chrono::NaiveDate::from_ymd_opt(target_year, target_month as u32, target_day)
-            .expect("Invalid date");
+        let target_date =
+            chrono::NaiveDate::from_ymd_opt(target_year, target_month as u32, target_day)
+                .expect("Invalid date after adding months");
+
         let target_naive_dt = target_date.and_time(naive.time());
-
-        // Convert back to the original timezone
-        self.time_now.timezone().from_local_datetime(&target_naive_dt).unwrap()
+        self.from_naive_local(target_naive_dt)
     }
 
     pub fn months_from_now(&self) -> DateTime<F> {
@@ -128,20 +204,21 @@ impl<F: TimeZone> EasyTime<F> {
         self.add_months(-(self.value as i32))
     }
 
-    /// Similar logic for adding years
+    // ------------------------------------------------------------------
+    //               Year-Based Offsets (custom logic)
+    // ------------------------------------------------------------------
     fn add_years(&self, years: i32) -> DateTime<F> {
         let naive = self.time_now.naive_local();
-        let year = naive.year() + years;
-        let month = naive.month();
-        let day = naive.day();
+        let (year, month, day) = (naive.year() + years, naive.month(), naive.day());
 
-        let days_in_target_month = Self::days_in_month(year, month);
-        let target_day = std::cmp::min(day, days_in_target_month);
+        let days_in_target = Self::days_in_month(year, month);
+        let target_day = std::cmp::min(day, days_in_target);
 
         let target_date = chrono::NaiveDate::from_ymd_opt(year, month, target_day)
-            .expect("Invalid date");
+            .expect("Invalid date after adding years");
+
         let target_naive_dt = target_date.and_time(naive.time());
-        self.time_now.timezone().from_local_datetime(&target_naive_dt).unwrap()
+        self.from_naive_local(target_naive_dt)
     }
 
     pub fn years_from_now(&self) -> DateTime<F> {
@@ -174,5 +251,66 @@ impl<F: TimeZone> EasyTime<F> {
 
     pub fn millenniums_ago(&self) -> DateTime<F> {
         self.add_years(-(self.value as i32) * 1000)
+    }
+
+    // ------------------------------------------------------------------
+    //          Formatting Methods
+    // ------------------------------------------------------------------
+    /// Internal helper to format the current time with an optional timezone suffix.
+    fn format_with(&self, format_str: &str, show_tz: bool) -> String {
+        let base = self.time_now.format(format_str).to_string();
+        if show_tz {
+            format!("{} {}", base, self.time_now.offset())
+        } else {
+            base
+        }
+    }
+
+    pub fn to_string(&self) -> String {
+        self.format_with("%Y-%m-%d %H:%M:%S", false)
+    }
+
+    pub fn to_string_with_format(&self, format_str: &str) -> String {
+        self.format_with(format_str, false)
+    }
+
+    pub fn to_string_with_timezone(&self) -> String {
+        self.format_with("%Y-%m-%d %H:%M:%S", true)
+    }
+
+    pub fn to_string_with_timezone_format(&self, format_str: &str) -> String {
+        self.format_with(format_str, true)
+    }
+
+    pub fn to_string_with_timezone_format_with_timezone(&self, format_str: &str) -> String {
+        // Essentially the same as the above, but kept for backward compatibility
+        self.format_with(format_str, true)
+    }
+
+    // ------------------------------------------------------------------
+    //           Other Utilities
+    // ------------------------------------------------------------------
+    pub fn to_timestamp(&self) -> i64 {
+        self.time_now.timestamp()
+    }
+
+    pub fn to_date(&self) -> String {
+        self.time_now.format("%Y-%m-%d").to_string()
+    }
+
+    pub fn to_time(&self) -> String {
+        self.time_now.format("%H:%M:%S").to_string()
+    }
+
+    pub fn to_date_time(&self) -> String {
+        self.time_now.format("%Y-%m-%d %H:%M:%S").to_string()
+    }
+
+    pub fn to_date_time_with_timezone_format(&self, format_str: &str) -> String {
+        format!(
+            "{} {}",
+            self.time_now.format(format_str),
+            self.time_now.offset()
+        )
     }
 }
