@@ -3,7 +3,6 @@ use chrono::prelude::Local;
 use chrono::Duration;
 use easy_time::EasyTime;
 
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -22,7 +21,7 @@ mod tests {
         let date_time: chrono::DateTime<Local> = Local::now();
         let easy_time: EasyTime<Local> = EasyTime::new_with_time(10, date_time);
         let expected: chrono::DateTime<Local> = date_time + Duration::seconds(10);
-        assert_eq!(easy_time.seconds_from_now(),expected);
+        assert_eq!(easy_time.seconds_from_now(), expected);
     }
 
     // Test the EasyTime::minutes_from_now method
@@ -171,7 +170,9 @@ mod tests {
         // Adding 2 decades = 20 years
         let expected_year = 2023 + 20;
         // Attempting to preserve day/month: July 15, 2043
-        let expected = Local.with_ymd_and_hms(expected_year, 7, 15, 8, 30, 0).unwrap();
+        let expected = Local
+            .with_ymd_and_hms(expected_year, 7, 15, 8, 30, 0)
+            .unwrap();
         assert_eq!(easy_time.decades_from_now(), expected);
     }
 
@@ -182,7 +183,9 @@ mod tests {
         let easy_time = EasyTime::new_with_time(1, date_time);
         // Adding 1 century = 100 years
         let expected_year = 2100;
-        let expected = Local.with_ymd_and_hms(expected_year, 1, 1, 0, 0, 0).unwrap();
+        let expected = Local
+            .with_ymd_and_hms(expected_year, 1, 1, 0, 0, 0)
+            .unwrap();
         assert_eq!(easy_time.centuries_from_now(), expected);
     }
 
@@ -193,7 +196,9 @@ mod tests {
         let easy_time = EasyTime::new_with_time(1, date_time);
         // Adding 1 millennium = 1000 years
         let expected_year = 2000;
-        let expected = Local.with_ymd_and_hms(expected_year, 6, 1, 12, 0, 0).unwrap();
+        let expected = Local
+            .with_ymd_and_hms(expected_year, 6, 1, 12, 0, 0)
+            .unwrap();
         assert_eq!(easy_time.millenniums_from_now(), expected);
     }
 
@@ -213,14 +218,15 @@ mod tests {
         assert_eq!(easy_time.years_ago(), expected);
     }
 
-
     #[test]
     fn test_decades_ago() {
         let date_time = Local.with_ymd_and_hms(2023, 7, 15, 8, 30, 0).unwrap();
         let easy_time = EasyTime::new_with_time(2, date_time);
         // Subtracting 2 decades => 20 years
         let expected_year = 2023 - 20; // 2003
-        let expected = Local.with_ymd_and_hms(expected_year, 7, 15, 8, 30, 0).unwrap();
+        let expected = Local
+            .with_ymd_and_hms(expected_year, 7, 15, 8, 30, 0)
+            .unwrap();
         assert_eq!(easy_time.decades_ago(), expected);
     }
 
@@ -372,4 +378,30 @@ mod tests {
         );
     }
 
+    // Test in_future
+
+    #[test]
+    fn test_in_future() {
+        let result: chrono::DateTime<Local> =
+            EasyTime::<Local>::in_future(10, easy_time::TimeUnits::Days, None);
+        assert!(result > Local::now());
+
+        let result: chrono::DateTime<Utc> =
+            EasyTime::<Utc>::in_future(10, easy_time::TimeUnits::Days, None);
+        assert!(result > Utc::now());
+    }
+
+    // Test in_past
+    #[test]
+    fn test_in_past() {
+        let result: chrono::DateTime<Local> =
+            EasyTime::<Local>::in_past(10, easy_time::TimeUnits::Days, None);
+        assert!(result < Local::now());
+
+        let result: chrono::DateTime<Utc> =
+            EasyTime::<Utc>::in_past(10, easy_time::TimeUnits::Days, None);
+        assert!(result < Utc::now());
+    }
+
+    
 }

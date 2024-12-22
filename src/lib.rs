@@ -1,5 +1,19 @@
-use chrono::prelude::*;
-use chrono::{Datelike, Duration, Local, LocalResult, TimeZone, Utc};
+use chrono::prelude::{DateTime, TimeZone};
+use chrono::{Datelike, Duration, Local, LocalResult, Utc};
+
+// create enum for seconds, minutes, hours, days, months, years, decades, centuries, millenniums
+#[derive(Debug)]
+pub enum TimeUnits {
+    Seconds,
+    Minutes,
+    Hours,
+    Days,
+    Months,
+    Years,
+    Decades,
+    Centuries,
+    Millenniums,
+}
 
 #[derive(Clone, PartialEq, Debug, Eq)]
 pub struct EasyTime<F: TimeZone> {
@@ -24,6 +38,47 @@ impl EasyTime<Local> {
             time_now: time,
         }
     }
+
+    // value then type of time unit then time or if time is not provided then current time
+    pub fn in_future(
+        value: i64,
+        time_unit: TimeUnits,
+        time: Option<DateTime<Local>>,
+    ) -> DateTime<Local> {
+        let time = time.unwrap_or(Local::now());
+        let easy_time = EasyTime::new_with_local(time, value);
+        match time_unit {
+            TimeUnits::Seconds => easy_time.seconds_from_now(),
+            TimeUnits::Minutes => easy_time.minutes_from_now(),
+            TimeUnits::Hours => easy_time.hours_from_now(),
+            TimeUnits::Days => easy_time.days_from_now(),
+            TimeUnits::Months => easy_time.months_from_now(),
+            TimeUnits::Years => easy_time.years_from_now(),
+            TimeUnits::Decades => easy_time.decades_from_now(),
+            TimeUnits::Centuries => easy_time.centuries_from_now(),
+            TimeUnits::Millenniums => easy_time.millenniums_from_now(),
+        }
+    }
+
+    pub fn in_past(
+        value: i64,
+        time_unit: TimeUnits,
+        time: Option<DateTime<Local>>,
+    ) -> DateTime<Local> {
+        let time = time.unwrap_or(Local::now());
+        let easy_time = EasyTime::new_with_local(time, value);
+        match time_unit {
+            TimeUnits::Seconds => easy_time.seconds_ago(),
+            TimeUnits::Minutes => easy_time.minutes_ago(),
+            TimeUnits::Hours => easy_time.hours_ago(),
+            TimeUnits::Days => easy_time.days_ago(),
+            TimeUnits::Months => easy_time.months_ago(),
+            TimeUnits::Years => easy_time.years_ago(),
+            TimeUnits::Decades => easy_time.decades_ago(),
+            TimeUnits::Centuries => easy_time.centuries_ago(),
+            TimeUnits::Millenniums => easy_time.millenniums_ago(),
+        }
+    }
 }
 
 // ----------------------------------------------------------
@@ -34,6 +89,51 @@ impl EasyTime<Utc> {
         Self {
             value,
             time_now: Utc::now(),
+        }
+    }
+
+    pub fn new_with_utc_time(time: DateTime<Utc>, value: i64) -> Self {
+        Self {
+            value,
+            time_now: time,
+        }
+    }
+
+    // value then type of time unit then time or if time is not provided then current time
+
+    pub fn in_future(
+        value: i64,
+        time_unit: TimeUnits,
+        time: Option<DateTime<Utc>>,
+    ) -> DateTime<Utc> {
+        let time = time.unwrap_or(Utc::now());
+        let easy_time = EasyTime::new_with_utc_time(time, value);
+        match time_unit {
+            TimeUnits::Seconds => easy_time.seconds_from_now(),
+            TimeUnits::Minutes => easy_time.minutes_from_now(),
+            TimeUnits::Hours => easy_time.hours_from_now(),
+            TimeUnits::Days => easy_time.days_from_now(),
+            TimeUnits::Months => easy_time.months_from_now(),
+            TimeUnits::Years => easy_time.years_from_now(),
+            TimeUnits::Decades => easy_time.decades_from_now(),
+            TimeUnits::Centuries => easy_time.centuries_from_now(),
+            TimeUnits::Millenniums => easy_time.millenniums_from_now(),
+        }
+    }
+
+    pub fn in_past(value: i64, time_unit: TimeUnits, time: Option<DateTime<Utc>>) -> DateTime<Utc> {
+        let time = time.unwrap_or(Utc::now());
+        let easy_time = EasyTime::new_with_utc_time(time, value);
+        match time_unit {
+            TimeUnits::Seconds => easy_time.seconds_ago(),
+            TimeUnits::Minutes => easy_time.minutes_ago(),
+            TimeUnits::Hours => easy_time.hours_ago(),
+            TimeUnits::Days => easy_time.days_ago(),
+            TimeUnits::Months => easy_time.months_ago(),
+            TimeUnits::Years => easy_time.years_ago(),
+            TimeUnits::Decades => easy_time.decades_ago(),
+            TimeUnits::Centuries => easy_time.centuries_ago(),
+            TimeUnits::Millenniums => easy_time.millenniums_ago(),
         }
     }
 }
@@ -110,14 +210,22 @@ where
         }
     }
 
-    /// Add `duration` to `time_now`.
-    fn offset(&self, duration: Duration) -> DateTime<F> {
-        self.time_now.clone() + duration
+    // /// Add `duration` to `time_now`.
+    // pub fn offset(&self, duration: Duration) -> DateTime<F> {
+    //     self.time_now.clone() + duration
+    // }
+
+    // /// Subtract `duration` from `time_now`.
+    // pub fn offset_neg(&self, duration: Duration) -> DateTime<F> {
+    //     self.time_now.clone() - duration
+    // }
+
+    pub fn offset(time: DateTime<F>, duration: Duration) -> DateTime<F> {
+        time + duration
     }
 
-    /// Subtract `duration` from `time_now`.
-    fn offset_neg(&self, duration: Duration) -> DateTime<F> {
-        self.time_now.clone() - duration
+    pub fn offset_neg(time: DateTime<F>, duration: Duration) -> DateTime<F> {
+        time - duration
     }
 
     /// Tries to build a `DateTime<F>` from a naive date-time.
@@ -134,35 +242,35 @@ where
     //           Simple Offsets: seconds, minutes, hours, days
     // ------------------------------------------------------------------
     pub fn seconds_from_now(&self) -> DateTime<F> {
-        self.offset(Duration::seconds(self.value))
+        Self::offset(self.time_now.clone(), Duration::seconds(self.value))
     }
 
     pub fn seconds_ago(&self) -> DateTime<F> {
-        self.offset_neg(Duration::seconds(self.value))
+        Self::offset_neg(self.time_now.clone(), Duration::seconds(self.value))
     }
 
     pub fn minutes_from_now(&self) -> DateTime<F> {
-        self.offset(Duration::minutes(self.value))
+        Self::offset(self.time_now.clone(), Duration::minutes(self.value))
     }
 
     pub fn minutes_ago(&self) -> DateTime<F> {
-        self.offset_neg(Duration::minutes(self.value))
+        Self::offset_neg(self.time_now.clone(), Duration::minutes(self.value))
     }
 
     pub fn hours_from_now(&self) -> DateTime<F> {
-        self.offset(Duration::hours(self.value))
+        Self::offset(self.time_now.clone(), Duration::hours(self.value))
     }
 
     pub fn hours_ago(&self) -> DateTime<F> {
-        self.offset_neg(Duration::hours(self.value))
+        Self::offset_neg(self.time_now.clone(), Duration::hours(self.value))
     }
 
     pub fn days_from_now(&self) -> DateTime<F> {
-        self.offset(Duration::days(self.value))
+        Self::offset(self.time_now.clone(), Duration::days(self.value))
     }
 
     pub fn days_ago(&self) -> DateTime<F> {
-        self.offset_neg(Duration::days(self.value))
+        Self::offset_neg(self.time_now.clone(), Duration::days(self.value))
     }
 
     // ------------------------------------------------------------------

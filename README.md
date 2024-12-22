@@ -21,7 +21,7 @@ To use the EasyTime library in your Rust project, add it as a dependency in your
 
 ```toml
 [dependencies]
-easytime = "0.1.6"
+easytime = "0.1.7"
 ```
 
 ---
@@ -38,13 +38,16 @@ use chrono::Local;
 fn main() {
     // Create an EasyTime instance for local time with a value of 10.
     let easy_time = EasyTime::<Local>::new(10);
-
     // Add and subtract time intervals
     let future_time = easy_time.seconds_from_now();
     let past_time = easy_time.minutes_ago();
-
     println!("Future Time (10 seconds from now): {}", future_time);
     println!("Past Time (10 minutes ago): {}", past_time);
+    let past_time_local = EasyTime::<Local>::in_past(10, easy_time::TimeUnits::Days, None);
+    let past_time_utc:  EasyTime::<Utc>::in_past(10, easy_time::TimeUnits::Days, None); 
+    let future_time_local = EasyTime::<Local>::in_future(10, easy_time::TimeUnits::Days, None);
+    let future_time_utc:  EasyTime::<Utc>::in_future(10, easy_time::TimeUnits::Days, None); 
+    
 }
 ```
 
