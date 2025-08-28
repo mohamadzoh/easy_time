@@ -2,7 +2,7 @@ use chrono::prelude::{DateTime, TimeZone};
 use chrono::{Datelike, Duration, Local, LocalResult, Utc};
 
 // create enum for seconds, minutes, hours, days, months, years, decades, centuries, millenniums
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum TimeUnits {
     Seconds,
     Minutes,
@@ -19,6 +19,55 @@ pub enum TimeUnits {
 pub struct EasyTime<F: TimeZone> {
     pub value: i64,
     pub time_now: DateTime<F>,
+}
+
+// Constant array for days in each month (non-leap year)
+const DAYS_IN_MONTH: [u32; 12] = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+
+// Generic trait to eliminate code duplication between Local and Utc
+pub trait EasyTimeOps<F: TimeZone> {
+    fn apply_time_unit_forward(value: i64, time_unit: TimeUnits, time: DateTime<F>) -> DateTime<F>
+    where
+        F::Offset: std::fmt::Display;
+
+    fn apply_time_unit_backward(value: i64, time_unit: TimeUnits, time: DateTime<F>) -> DateTime<F>
+    where
+        F::Offset: std::fmt::Display;
+}
+
+impl<F: TimeZone> EasyTimeOps<F> for EasyTime<F>
+where
+    F::Offset: std::fmt::Display,
+{
+    fn apply_time_unit_forward(value: i64, time_unit: TimeUnits, time: DateTime<F>) -> DateTime<F> {
+        let easy_time = EasyTime::new_with_time(value, time);
+        match time_unit {
+            TimeUnits::Seconds => easy_time.seconds_from_now(),
+            TimeUnits::Minutes => easy_time.minutes_from_now(),
+            TimeUnits::Hours => easy_time.hours_from_now(),
+            TimeUnits::Days => easy_time.days_from_now(),
+            TimeUnits::Months => easy_time.months_from_now(),
+            TimeUnits::Years => easy_time.years_from_now(),
+            TimeUnits::Decades => easy_time.decades_from_now(),
+            TimeUnits::Centuries => easy_time.centuries_from_now(),
+            TimeUnits::Millenniums => easy_time.millenniums_from_now(),
+        }
+    }
+
+    fn apply_time_unit_backward(value: i64, time_unit: TimeUnits, time: DateTime<F>) -> DateTime<F> {
+        let easy_time = EasyTime::new_with_time(value, time);
+        match time_unit {
+            TimeUnits::Seconds => easy_time.seconds_ago(),
+            TimeUnits::Minutes => easy_time.minutes_ago(),
+            TimeUnits::Hours => easy_time.hours_ago(),
+            TimeUnits::Days => easy_time.days_ago(),
+            TimeUnits::Months => easy_time.months_ago(),
+            TimeUnits::Years => easy_time.years_ago(),
+            TimeUnits::Decades => easy_time.decades_ago(),
+            TimeUnits::Centuries => easy_time.centuries_ago(),
+            TimeUnits::Millenniums => easy_time.millenniums_ago(),
+        }
+    }
 }
 
 // ----------------------------------------------------------
@@ -45,19 +94,8 @@ impl EasyTime<Local> {
         time_unit: TimeUnits,
         time: Option<DateTime<Local>>,
     ) -> DateTime<Local> {
-        let time = time.unwrap_or(Local::now());
-        let easy_time = EasyTime::new_with_local(time, value);
-        match time_unit {
-            TimeUnits::Seconds => easy_time.seconds_from_now(),
-            TimeUnits::Minutes => easy_time.minutes_from_now(),
-            TimeUnits::Hours => easy_time.hours_from_now(),
-            TimeUnits::Days => easy_time.days_from_now(),
-            TimeUnits::Months => easy_time.months_from_now(),
-            TimeUnits::Years => easy_time.years_from_now(),
-            TimeUnits::Decades => easy_time.decades_from_now(),
-            TimeUnits::Centuries => easy_time.centuries_from_now(),
-            TimeUnits::Millenniums => easy_time.millenniums_from_now(),
-        }
+        let time = time.unwrap_or_else(Local::now);
+        Self::apply_time_unit_forward(value, time_unit, time)
     }
 
     pub fn in_past(
@@ -65,19 +103,8 @@ impl EasyTime<Local> {
         time_unit: TimeUnits,
         time: Option<DateTime<Local>>,
     ) -> DateTime<Local> {
-        let time = time.unwrap_or(Local::now());
-        let easy_time = EasyTime::new_with_local(time, value);
-        match time_unit {
-            TimeUnits::Seconds => easy_time.seconds_ago(),
-            TimeUnits::Minutes => easy_time.minutes_ago(),
-            TimeUnits::Hours => easy_time.hours_ago(),
-            TimeUnits::Days => easy_time.days_ago(),
-            TimeUnits::Months => easy_time.months_ago(),
-            TimeUnits::Years => easy_time.years_ago(),
-            TimeUnits::Decades => easy_time.decades_ago(),
-            TimeUnits::Centuries => easy_time.centuries_ago(),
-            TimeUnits::Millenniums => easy_time.millenniums_ago(),
-        }
+        let time = time.unwrap_or_else(Local::now);
+        Self::apply_time_unit_backward(value, time_unit, time)
     }
 }
 
@@ -100,41 +127,18 @@ impl EasyTime<Utc> {
     }
 
     // value then type of time unit then time or if time is not provided then current time
-
     pub fn in_future(
         value: i64,
         time_unit: TimeUnits,
         time: Option<DateTime<Utc>>,
     ) -> DateTime<Utc> {
-        let time = time.unwrap_or(Utc::now());
-        let easy_time = EasyTime::new_with_utc_time(time, value);
-        match time_unit {
-            TimeUnits::Seconds => easy_time.seconds_from_now(),
-            TimeUnits::Minutes => easy_time.minutes_from_now(),
-            TimeUnits::Hours => easy_time.hours_from_now(),
-            TimeUnits::Days => easy_time.days_from_now(),
-            TimeUnits::Months => easy_time.months_from_now(),
-            TimeUnits::Years => easy_time.years_from_now(),
-            TimeUnits::Decades => easy_time.decades_from_now(),
-            TimeUnits::Centuries => easy_time.centuries_from_now(),
-            TimeUnits::Millenniums => easy_time.millenniums_from_now(),
-        }
+        let time = time.unwrap_or_else(Utc::now);
+        Self::apply_time_unit_forward(value, time_unit, time)
     }
 
     pub fn in_past(value: i64, time_unit: TimeUnits, time: Option<DateTime<Utc>>) -> DateTime<Utc> {
-        let time = time.unwrap_or(Utc::now());
-        let easy_time = EasyTime::new_with_utc_time(time, value);
-        match time_unit {
-            TimeUnits::Seconds => easy_time.seconds_ago(),
-            TimeUnits::Minutes => easy_time.minutes_ago(),
-            TimeUnits::Hours => easy_time.hours_ago(),
-            TimeUnits::Days => easy_time.days_ago(),
-            TimeUnits::Months => easy_time.months_ago(),
-            TimeUnits::Years => easy_time.years_ago(),
-            TimeUnits::Decades => easy_time.decades_ago(),
-            TimeUnits::Centuries => easy_time.centuries_ago(),
-            TimeUnits::Millenniums => easy_time.millenniums_ago(),
-        }
+        let time = time.unwrap_or_else(Utc::now);
+        Self::apply_time_unit_backward(value, time_unit, time)
     }
 }
 
@@ -175,38 +179,24 @@ where
         self.value
     }
 
-    pub fn get_time(&self) -> DateTime<F> {
-        self.time_now.clone()
+    pub fn get_time(&self) -> &DateTime<F> {
+        &self.time_now
     }
 
     // ------------------------------------------------------------------
     //                      Internal Helpers
     // ------------------------------------------------------------------
-    fn is_leap_year(year: i32) -> bool {
+    #[inline]
+    const fn is_leap_year(year: i32) -> bool {
         (year % 4 == 0 && year % 100 != 0) || (year % 400 == 0)
     }
 
+    #[inline]
     fn days_in_month(year: i32, month: u32) -> u32 {
-        match month {
-            1 => 31,
-            2 => {
-                if Self::is_leap_year(year) {
-                    29
-                } else {
-                    28
-                }
-            }
-            3 => 31,
-            4 => 30,
-            5 => 31,
-            6 => 30,
-            7 => 31,
-            8 => 31,
-            9 => 30,
-            10 => 31,
-            11 => 30,
-            12 => 31,
-            _ => panic!("Invalid month"),
+        if month == 2 && Self::is_leap_year(year) {
+            29
+        } else {
+            DAYS_IN_MONTH[(month - 1) as usize]
         }
     }
 
@@ -220,17 +210,19 @@ where
     //     self.time_now.clone() - duration
     // }
 
-    pub fn offset(time: DateTime<F>, duration: Duration) -> DateTime<F> {
-        time + duration
+    #[inline]
+    pub fn offset(time: &DateTime<F>, duration: Duration) -> DateTime<F> {
+        time.clone() + duration
     }
 
-    pub fn offset_neg(time: DateTime<F>, duration: Duration) -> DateTime<F> {
-        time - duration
+    #[inline]
+    pub fn offset_neg(time: &DateTime<F>, duration: Duration) -> DateTime<F> {
+        time.clone() - duration
     }
 
     /// Tries to build a `DateTime<F>` from a naive date-time.
     /// Uses `.unwrap()` in ambiguous cases by picking the first match, and panics on invalid.
-    fn from_naive_local(&self, naive: chrono::NaiveDateTime) -> DateTime<F> {
+    fn build_datetime_from_naive(&self, naive: chrono::NaiveDateTime) -> DateTime<F> {
         match self.time_now.timezone().from_local_datetime(&naive) {
             LocalResult::Single(dt) => dt,
             LocalResult::Ambiguous(a, _b) => a,
@@ -242,35 +234,35 @@ where
     //           Simple Offsets: seconds, minutes, hours, days
     // ------------------------------------------------------------------
     pub fn seconds_from_now(&self) -> DateTime<F> {
-        Self::offset(self.time_now.clone(), Duration::seconds(self.value))
+        Self::offset(&self.time_now, Duration::seconds(self.value))
     }
 
     pub fn seconds_ago(&self) -> DateTime<F> {
-        Self::offset_neg(self.time_now.clone(), Duration::seconds(self.value))
+        Self::offset_neg(&self.time_now, Duration::seconds(self.value))
     }
 
     pub fn minutes_from_now(&self) -> DateTime<F> {
-        Self::offset(self.time_now.clone(), Duration::minutes(self.value))
+        Self::offset(&self.time_now, Duration::minutes(self.value))
     }
 
     pub fn minutes_ago(&self) -> DateTime<F> {
-        Self::offset_neg(self.time_now.clone(), Duration::minutes(self.value))
+        Self::offset_neg(&self.time_now, Duration::minutes(self.value))
     }
 
     pub fn hours_from_now(&self) -> DateTime<F> {
-        Self::offset(self.time_now.clone(), Duration::hours(self.value))
+        Self::offset(&self.time_now, Duration::hours(self.value))
     }
 
     pub fn hours_ago(&self) -> DateTime<F> {
-        Self::offset_neg(self.time_now.clone(), Duration::hours(self.value))
+        Self::offset_neg(&self.time_now, Duration::hours(self.value))
     }
 
     pub fn days_from_now(&self) -> DateTime<F> {
-        Self::offset(self.time_now.clone(), Duration::days(self.value))
+        Self::offset(&self.time_now, Duration::days(self.value))
     }
 
     pub fn days_ago(&self) -> DateTime<F> {
-        Self::offset_neg(self.time_now.clone(), Duration::days(self.value))
+        Self::offset_neg(&self.time_now, Duration::days(self.value))
     }
 
     // ------------------------------------------------------------------
@@ -301,7 +293,7 @@ where
                 .expect("Invalid date after adding months");
 
         let target_naive_dt = target_date.and_time(naive.time());
-        self.from_naive_local(target_naive_dt)
+        self.build_datetime_from_naive(target_naive_dt)
     }
 
     pub fn months_from_now(&self) -> DateTime<F> {
@@ -326,7 +318,7 @@ where
             .expect("Invalid date after adding years");
 
         let target_naive_dt = target_date.and_time(naive.time());
-        self.from_naive_local(target_naive_dt)
+        self.build_datetime_from_naive(target_naive_dt)
     }
 
     pub fn years_from_now(&self) -> DateTime<F> {
@@ -365,15 +357,17 @@ where
     //          Formatting Methods
     // ------------------------------------------------------------------
     /// Internal helper to format the current time with an optional timezone suffix.
+    #[inline]
     fn format_with(&self, format_str: &str, show_tz: bool) -> String {
-        let base = self.time_now.format(format_str).to_string();
         if show_tz {
-            format!("{} {}", base, self.time_now.offset())
+            format!("{} {}", self.time_now.format(format_str), self.time_now.offset())
         } else {
-            base
+            self.time_now.format(format_str).to_string()
         }
     }
 
+    /// Returns a string representation using the default format.
+    #[allow(clippy::inherent_to_string_shadow_display)]
     pub fn to_string(&self) -> String {
         self.format_with("%Y-%m-%d %H:%M:%S", false)
     }
@@ -398,27 +392,37 @@ where
     // ------------------------------------------------------------------
     //           Other Utilities
     // ------------------------------------------------------------------
+    #[inline]
     pub fn to_timestamp(&self) -> i64 {
         self.time_now.timestamp()
     }
 
+    #[inline]
     pub fn to_date(&self) -> String {
         self.time_now.format("%Y-%m-%d").to_string()
     }
 
+    #[inline]
     pub fn to_time(&self) -> String {
         self.time_now.format("%H:%M:%S").to_string()
     }
 
+    #[inline]
     pub fn to_date_time(&self) -> String {
         self.time_now.format("%Y-%m-%d %H:%M:%S").to_string()
     }
 
     pub fn to_date_time_with_timezone_format(&self, format_str: &str) -> String {
-        format!(
-            "{} {}",
-            self.time_now.format(format_str),
-            self.time_now.offset()
-        )
+        format!("{} {}", self.time_now.format(format_str), self.time_now.offset())
+    }
+}
+
+// Implementation of Display trait for better performance
+impl<F: TimeZone> std::fmt::Display for EasyTime<F>
+where
+    F::Offset: std::fmt::Display,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.time_now.format("%Y-%m-%d %H:%M:%S"))
     }
 }
