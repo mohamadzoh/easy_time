@@ -1,6 +1,6 @@
 [package]
 name = "easy_time"
-version = "0.1.8"
+version = "0.1.9"
 edition = "2024"
 authors = ["Mohamad Al zohbie <alzoubi528@gmail.com>"]
 
