@@ -1,16 +1,19 @@
 [package]
 name = "easy_time"
-version = "0.1.9"
+version = "0.2.0"
 edition = "2024"
+rust-version = "1.85"
 authors = ["Mohamad Al zohbie <alzoubi528@gmail.com>"]
 
-description= "package for handling time in rust more easily"
+description = "A simple and intuitive library for handling time in Rust"
+documentation = "https://docs.rs/easy_time"
+homepage = "https://github.com/mohamadzoh/easy_time"
 repository = "https://github.com/mohamadzoh/easy_time"
 readme = "README.md"
-keywords = ["time", "date", "datetime", "easy","chrono"]
-license = "MIT/Apache-2.0"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+keywords = ["time", "date", "datetime", "easy", "chrono"]
+license = "MIT OR Apache-2.0"
+categories = ["date-and-time"]
+exclude = ["target/", ".github/", ".gitignore"]
 
 [dependencies]
-chrono = "0.4.39"
+chrono = "0.4.42"
