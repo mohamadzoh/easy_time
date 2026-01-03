@@ -21,7 +21,7 @@ To use the EasyTime library in your Rust project, add it as a dependency in your
 
 ```toml
 [dependencies]
-easytime = "0.1.7"
+easytime = "*"
 ```
 
 ---
