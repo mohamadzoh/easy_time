@@ -1,5 +1,35 @@
 CHANGE LOG
 
+Version 0.3.0 - 2026-11-15
+Breaking changes:
+
+- All time arithmetic is generic over any `chrono::TimeZone` (`FixedOffset`, `chrono_tz::Tz`, ...),
+  not just `Local` and `Utc`. `*_from_now` / `*_ago` need the new `Now` trait, implemented for `Local` and `Utc`.
+- `days` and `weeks` are calendar units: they keep the wall-clock time across DST changes instead of adding 24h.
+- Removed the `utc_*` methods; use `EasyTime::<Utc>::*` instead.
+- `is_leap_year` and `days_in_month` are now free functions; `days_in_month` returns `Option<u32>`.
+- `format_datetime_with` returns `Option<String>` (`None` for an invalid format string).
+- `format_datetime_with_timezone` always prints a numeric offset (`+00:00` rather than `UTC`).
+- Removed `to_timestamp` (use `dt.timestamp()`) and `format_datetime_with_timezone_format`
+  (use `format_datetime_with` with `%:z`).
+
+Bug fixes:
+
+- Months/years landing in a DST gap no longer panic; the time moves forward past the gap.
+- Large month/year amounts were truncated to `i32` and silently gave wrong dates; they now report out of range.
+- `decades/centuries/millenniums` with large amounts overflowed `i32`.
+- `days_in_month` panicked for month 0 or 13+.
+- `format_datetime_with` panicked on an invalid format string.
+
+New:
+
+- `EasyTime::checked_add(base, amount, Unit)` returns `None` instead of panicking.
+- `EasyTime::start_of` / `EasyTime::end_of` for any `Unit` (start of day, week, month, year, ...).
+- `humanize(&dt)` and `humanize_delta(delta)`: "3 days ago", "in 2 hours".
+- `easy_time::chrono` re-export.
+- Out-of-range results panic with a clear `easy_time: date out of range` message.
+
+
 Version 0.1.4 - 2024-03-20
 Changes:
 

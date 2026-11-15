@@ -1,242 +1,157 @@
 
-# EasyTime Library
+# EasyTime
 
-The EasyTime library is a powerful Rust crate designed to simplify date and time calculations. It builds upon the `chrono` library to provide robust support for time zone-aware operations, leap year handling, and extensive formatting options. With EasyTime, you can easily add or subtract seconds, minutes, hours, days, weeks, months, years, decades, centuries, and millennia from the current time using simple static methods.
+Human-friendly date arithmetic for Rust, built on [`chrono`](https://docs.rs/chrono).
 
----
+```rust
+use easy_time::EasyTime;
+use chrono::Local;
 
-## Features
+let next_week = EasyTime::<Local>::weeks_from_now(1);
+let last_quarter = EasyTime::<Local>::months_ago(3);
+```
 
-- **Simple Static API**: No need to create instances - just call `EasyTime::<Local>::days_from_now(5)`.
-- **Time Zone Support**: Work with local time (`Local`) or UTC time (`Utc`).
-- **Flexible Date-Time Offsets**: Add or subtract time intervals with methods for seconds, minutes, hours, days, weeks, months, years, and beyond.
-- **Precise Calculations**: Handles leap years, month lengths, and timezone transitions.
-- **Comprehensive Formatting**: Customize date-time output with flexible formatting functions.
-- **Conversion Utilities**: Convert between timestamps, dates, and times.
+- **Any time zone**: `Local`, `Utc`, `FixedOffset` and [`chrono-tz`](https://docs.rs/chrono-tz) zones.
+- **Calendar-correct**: month ends, leap years and DST changes behave the way people expect.
+- **No surprise panics**: `checked_add` returns `None` instead of overflowing, and a bad format string returns `None`.
+- **Periods and words**: `start_of` and `end_of` for a day, week, month or year, and `humanize` for text like "3 days ago".
 
 ---
 
 ## Installation
 
-To use the EasyTime library in your Rust project, add it as a dependency in your `Cargo.toml`:
-
 ```toml
 [dependencies]
-easy_time = "*"
+easy_time = "0.3"
 ```
+
+`easy_time` re-exports `chrono` as `easy_time::chrono`, so you don't need a separate dependency.
 
 ---
 
 ## Usage
 
-### Basic Time Calculations
+### Relative to now
 
 ```rust
 use easy_time::EasyTime;
-use chrono::Local;
+use chrono::{Local, Utc};
 
-fn main() {
-    // Simple time calculations - no instance creation needed!
-    let future_time = EasyTime::<Local>::seconds_from_now(10);
-    let past_time = EasyTime::<Local>::minutes_ago(5);
-    
-    println!("10 seconds from now: {}", future_time);
-    println!("5 minutes ago: {}", past_time);
-    
-    // Days, weeks, months, years...
-    let next_week = EasyTime::<Local>::weeks_from_now(1);
-    let last_month = EasyTime::<Local>::months_ago(1);
-    let next_year = EasyTime::<Local>::years_from_now(1);
-    
-    println!("Next week: {}", next_week);
-    println!("Last month: {}", last_month);
-    println!("Next year: {}", next_year);
-}
+let soon = EasyTime::<Local>::minutes_from_now(15);
+let yesterday = EasyTime::<Local>::days_ago(1);
+let next_year_utc = EasyTime::<Utc>::years_from_now(1);
 ```
 
-### Working with UTC
+Every unit has `*_from_now` and `*_ago`: `seconds`, `minutes`, `hours`, `days`, `weeks`, `months`,
+`years`, `decades`, `centuries`, `millenniums`.
+
+### From a base time, in any time zone
+
+The time zone is inferred from the base, so you don't need to name it:
 
 ```rust
 use easy_time::EasyTime;
+use chrono::{TimeZone, Utc};
+use chrono_tz::Europe::Paris;
+
+let base = Utc.with_ymd_and_hms(2024, 1, 31, 9, 0, 0).unwrap();
+assert_eq!(EasyTime::months_from(base, 1), Utc.with_ymd_and_hms(2024, 2, 29, 9, 0, 0).unwrap());
+
+let meeting = Paris.with_ymd_and_hms(2024, 3, 30, 10, 0, 0).unwrap();
+let next = EasyTime::weeks_from(meeting, 1); // still 10:00 in Paris, after the DST change
+```
+
+Every unit has `*_from(base, n)` and `*_before(base, n)`.
+
+### Amounts you don't control
+
+The named methods panic if the result is out of chrono's range (about ±262,000 years).
+For amounts from user input or config, use `checked_add`:
+
+```rust
+use easy_time::{EasyTime, Unit};
 use chrono::Utc;
 
-fn main() {
-    // UTC time calculations
-    let utc_future = EasyTime::<Utc>::hours_from_now(10);
-    let utc_past = EasyTime::<Utc>::days_ago(7);
-    
-    println!("10 hours from now (UTC): {}", utc_future);
-    println!("7 days ago (UTC): {}", utc_past);
-    
-    // Convenience methods that return UTC time (can be called from any timezone)
-    let also_utc = EasyTime::<Local>::utc_days_from_now(5);
-    println!("5 days from now (UTC): {}", also_utc);
+let user_supplied_days: i64 = 30;
+match EasyTime::checked_add(Utc::now(), user_supplied_days, Unit::Days) {
+    Some(deadline) => println!("due {deadline}"),
+    None => println!("that's too far away"),
 }
 ```
 
-### Using Custom Base Times
+### Start and end of a period
 
 ```rust
-use easy_time::EasyTime;
-use chrono::{Local, TimeZone};
-
-fn main() {
-    // Start from a specific date instead of "now"
-    let base_date = Local.with_ymd_and_hms(2024, 1, 15, 12, 0, 0).unwrap();
-    
-    let future = EasyTime::<Local>::days_from(base_date, 30);
-    let past = EasyTime::<Local>::months_before(base_date, 3);
-    
-    println!("30 days after Jan 15, 2024: {}", future);
-    println!("3 months before Jan 15, 2024: {}", past);
-}
-```
-
-### Decades, Centuries, and Millennia
-
-```rust
-use easy_time::EasyTime;
+use easy_time::{EasyTime, Unit};
 use chrono::Local;
 
-fn main() {
-    let decade_future = EasyTime::<Local>::decades_from_now(1);
-    let century_past = EasyTime::<Local>::centuries_ago(1);
-    let millennium_future = EasyTime::<Local>::millenniums_from_now(1);
-    
-    println!("1 decade from now: {}", decade_future);
-    println!("1 century ago: {}", century_past);
-    println!("1 millennium from now: {}", millennium_future);
-}
+let now = Local::now();
+let today_start = EasyTime::start_of(now, Unit::Days);   // 00:00:00 today
+let month_end = EasyTime::end_of(now, Unit::Months);     // last nanosecond of this month
+let week_start = EasyTime::start_of(now, Unit::Weeks);   // Monday 00:00:00
 ```
 
-### Formatting Functions
+### In words
 
 ```rust
-use easy_time::{format_datetime, format_datetime_with, format_datetime_with_timezone, to_date, to_time, to_timestamp};
-use chrono::Local;
+use easy_time::{humanize, humanize_delta, EasyTime};
+use chrono::{TimeDelta, Utc};
 
-fn main() {
-    let now = Local::now();
-    
-    // Default format: YYYY-MM-DD HH:MM:SS
-    println!("Default: {}", format_datetime(&now));
-    
-    // Custom format
-    println!("Custom: {}", format_datetime_with(&now, "%Y/%m/%d"));
-    
-    // With timezone offset
-    println!("With TZ: {}", format_datetime_with_timezone(&now));
-    
-    // Just date or time
-    println!("Date only: {}", to_date(&now));
-    println!("Time only: {}", to_time(&now));
-    
-    // Unix timestamp
-    println!("Timestamp: {}", to_timestamp(&now));
-}
+assert_eq!(humanize(&EasyTime::<Utc>::days_from_now(3)), "in 3 days");
+assert_eq!(humanize_delta(TimeDelta::minutes(-90)), "1 hour ago");
 ```
 
-### Handling Leap Years
+### Formatting
 
 ```rust
-use easy_time::EasyTime;
+use easy_time::{format_datetime, format_datetime_with, format_datetime_with_timezone, to_date, to_time};
 use chrono::Local;
 
-fn main() {
-    // Check if a year is a leap year
-    let is_leap = EasyTime::<Local>::is_leap_year(2024);
-    println!("2024 is a leap year: {}", is_leap); // true
-    
-    // Get days in a month (handles leap years)
-    let feb_days_2024 = EasyTime::<Local>::days_in_month(2024, 2);
-    let feb_days_2023 = EasyTime::<Local>::days_in_month(2023, 2);
-    
-    println!("Days in Feb 2024: {}", feb_days_2024); // 29
-    println!("Days in Feb 2023: {}", feb_days_2023); // 28
-}
+let now = Local::now();
+format_datetime(&now);                  // "2024-07-04 09:05:00"
+format_datetime_with(&now, "%d/%m/%Y"); // Some("04/07/2024"), or None for an invalid format
+format_datetime_with_timezone(&now);    // "2024-07-04 09:05:00 +03:00"
+to_date(&now);                          // "2024-07-04"
+to_time(&now);                          // "09:05:00"
+```
+
+### Calendar helpers
+
+```rust
+assert!(easy_time::is_leap_year(2024));
+assert_eq!(easy_time::days_in_month(2024, 2), Some(29));
+assert_eq!(easy_time::days_in_month(2024, 13), None);
 ```
 
 ---
 
-## API Reference
+## How units behave
 
-### Time Offset Methods (Local Timezone)
+| Units | Meaning |
+|-------|---------|
+| seconds, minutes, hours | Exact elapsed time. |
+| days, weeks | Calendar days: the wall-clock time is kept across DST changes, so 12:00 plus one day is 12:00 the next day. |
+| months, years, decades, centuries, millenniums | Calendar months: the day is clamped to the target month, so Jan 31 plus one month is Feb 28 (or 29). |
 
-All methods are static and take the offset value as a parameter:
+A wall-clock time that falls in a DST gap moves forward by the length of the gap (02:30 becomes
+03:30). One that falls in a DST overlap keeps the base time's offset if it can, otherwise the earlier one.
 
-| Method | Description |
-|--------|-------------|
-| `EasyTime::<Local>::seconds_from_now(n)` | n seconds in the future |
-| `EasyTime::<Local>::seconds_ago(n)` | n seconds in the past |
-| `EasyTime::<Local>::minutes_from_now(n)` | n minutes in the future |
-| `EasyTime::<Local>::minutes_ago(n)` | n minutes in the past |
-| `EasyTime::<Local>::hours_from_now(n)` | n hours in the future |
-| `EasyTime::<Local>::hours_ago(n)` | n hours in the past |
-| `EasyTime::<Local>::days_from_now(n)` | n days in the future |
-| `EasyTime::<Local>::days_ago(n)` | n days in the past |
-| `EasyTime::<Local>::weeks_from_now(n)` | n weeks in the future |
-| `EasyTime::<Local>::weeks_ago(n)` | n weeks in the past |
-| `EasyTime::<Local>::months_from_now(n)` | n months in the future |
-| `EasyTime::<Local>::months_ago(n)` | n months in the past |
-| `EasyTime::<Local>::years_from_now(n)` | n years in the future |
-| `EasyTime::<Local>::years_ago(n)` | n years in the past |
-| `EasyTime::<Local>::decades_from_now(n)` | n decades in the future |
-| `EasyTime::<Local>::decades_ago(n)` | n decades in the past |
-| `EasyTime::<Local>::centuries_from_now(n)` | n centuries in the future |
-| `EasyTime::<Local>::centuries_ago(n)` | n centuries in the past |
-| `EasyTime::<Local>::millenniums_from_now(n)` | n millennia in the future |
-| `EasyTime::<Local>::millenniums_ago(n)` | n millennia in the past |
+Weeks start on Monday. Decades, centuries and millenniums start at years divisible by 10, 100 and 1000.
 
-### Methods with Custom Base Time
+---
 
-For calculations from a specific date instead of "now":
+## Upgrading from 0.2
 
-| Method | Description |
-|--------|-------------|
-| `EasyTime::<Local>::seconds_from(base, n)` | n seconds after base |
-| `EasyTime::<Local>::seconds_before(base, n)` | n seconds before base |
-| `EasyTime::<Local>::days_from(base, n)` | n days after base |
-| `EasyTime::<Local>::days_before(base, n)` | n days before base |
-| `EasyTime::<Local>::months_from(base, n)` | n months after base |
-| `EasyTime::<Local>::months_before(base, n)` | n months before base |
-| ... | (all time units supported) |
-
-### UTC Methods
-
-Same methods are available for `EasyTime::<Utc>`:
-
-```rust
-EasyTime::<Utc>::days_from_now(5)
-EasyTime::<Utc>::hours_ago(10)
-```
-
-### Convenience UTC Methods
-
-These can be called from any timezone type and return UTC times:
-
-```rust
-EasyTime::<Local>::utc_days_from_now(5)
-EasyTime::<Local>::utc_hours_ago(10)
-```
-
-### Formatting Functions
-
-| Function | Description |
-|----------|-------------|
-| `format_datetime(&dt)` | Format as `YYYY-MM-DD HH:MM:SS` |
-| `format_datetime_with(&dt, fmt)` | Format with custom format string |
-| `format_datetime_with_timezone(&dt)` | Format with timezone offset |
-| `format_datetime_with_timezone_format(&dt, fmt)` | Custom format with timezone |
-| `to_date(&dt)` | Returns `YYYY-MM-DD` |
-| `to_time(&dt)` | Returns `HH:MM:SS` |
-| `to_timestamp(&dt)` | Returns Unix timestamp |
-
-### Utility Methods
-
-| Method | Description |
-|--------|-------------|
-| `EasyTime::<Local>::is_leap_year(year)` | Check if year is a leap year |
-| `EasyTime::<Local>::days_in_month(year, month)` | Get number of days in a month |
+| 0.2 | 0.3 |
+|-----|-----|
+| `EasyTime::<Local>::utc_days_from_now(n)` | `EasyTime::<Utc>::days_from_now(n)` |
+| `EasyTime::<Local>::is_leap_year(y)` | `easy_time::is_leap_year(y)` |
+| `EasyTime::<Local>::days_in_month(y, m)` returns `u32`, panics on a bad month | `easy_time::days_in_month(y, m)` returns `Option<u32>` |
+| `format_datetime_with(&dt, f)` returns `String`, panics on a bad format | returns `Option<String>` |
+| `format_datetime_with_timezone_format(&dt, f)` | `format_datetime_with(&dt, &format!("{f} %:z"))` |
+| `to_timestamp(&dt)` | `dt.timestamp()` |
+| `*_from` / `*_before` only for `Local` and `Utc` | any `TimeZone` |
+| `days_from` across a DST change moved by exactly 24 hours | keeps the wall-clock time |
 
 ---
 
